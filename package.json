@@ -1,0 +1,28 @@
+{
+  "name": "valve-kv",
+  "version": "0.0.1",
+  "description": "Deserialize and serialize Valve's KeyValues (KV) format.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "ts-node node_modules/tape/bin/tape test/**/*.spec.ts"
+  },
+  "keywords": [
+    "valve",
+    "kv",
+    "key-values",
+    "vdf",
+    "parser"
+  ],
+  "author": {
+    "name": "Perry van Wesel",
+    "url": "https://github.com/Perryvw"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/tape": "^4.13.0",
+    "tape": "^5.1.1",
+    "ts-node": "^9.1.1"
+  }
+}
