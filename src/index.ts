@@ -2,7 +2,7 @@ export type KVObject = { [key: string]: KVValue };
 export type KVValue = KVObject | string | number | Array<KVValue>;
 
 export { serialize } from "./serialize";
-export { deserialize } from "./deserialize";
+export { deserialize, deserializeFile } from "./deserialize";
 
 export function isKvObject(value: KVValue): value is KVObject {
     return typeof value !== "string";

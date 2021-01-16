@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as test from "tape";
 
-import { deserialize, KVObject } from "../src/index";
+import { deserialize, deserializeFile, KVObject } from "../src/index";
 
 const testDeserialize = (kvstring: string, expected: KVObject) => (t: test.Test) => {
     const result = deserialize(kvstring);
@@ -57,7 +57,21 @@ test("deserialize array", testDeserialize(
 
 test("deserialize buffer", t => {
     const filename = path.join(__dirname, "testcases", "test.kv");
-    const result = deserialize(fs.readFileSync(filename));
+    const result = deserializeFile(filename);
     t.deepEqual(result, { A: { B: "C" }});
     t.end();
 });
+
+test("deserialize with BOM", t => {
+    const filename = path.join(__dirname, "testcases", "test-BOM.kv");
+    const result = deserializeFile(filename);
+    t.deepEqual(result, { A: { B: "C" }});
+    t.end();
+});
+
+// test("deserialize with utf16le", t => {
+//     const filename = path.join(__dirname, "testcases", "test-utf16le.kv");
+//     const result = deserializeFile(filename, "utf16le");
+//     t.deepEqual(result, { A: { B: "C" }});
+//     t.end();
+// });

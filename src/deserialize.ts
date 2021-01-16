@@ -1,15 +1,17 @@
+import * as fs from "fs";
+
 import { KVObject } from "./index";
 
-const ENCODING = "utf8";
-
-export function deserialize(kvstring: string | Buffer): KVObject {
+export function deserialize(kvstring: string | Buffer, encoding: BufferEncoding = "utf8"): KVObject {
     const buffer = typeof kvstring === "string" ? Buffer.from(kvstring) : kvstring;
-    const parser = new Parser(buffer);
+    const parser = new Parser(buffer, encoding);
     return parser.parse();
 }
 
-export function deserializeFile(filename: string): KVObject {
-    return {};
+export function deserializeFile(filename: string, encoding: BufferEncoding = "utf8"): KVObject {
+    const buffer = fs.readFileSync(filename);
+    const parser = new Parser(buffer, encoding);
+    return parser.parse();
 }
 
 export class DeserializationError extends Error {
@@ -23,10 +25,13 @@ class Parser {
     private index = -1;
     private next = "";
 
-    constructor (private buffer: Buffer) { }
+    constructor (private buffer: Buffer, private encoding: BufferEncoding) { }
 
     public parse(): KVObject {
         this.step(); // Initial step
+
+        this.skipBOM(); // Skip BOM
+        
         this.skipWhitespace();
 
         const bases = this.parseBases();
@@ -106,7 +111,7 @@ class Parser {
             this.step();
         }
 
-        const string = this.buffer.toString(ENCODING, start, this.index);
+        const string = this.buffer.toString(this.encoding, start, this.index);
 
         this.expectChar(`"`);
 
@@ -123,7 +128,7 @@ class Parser {
             this.step();
         }
 
-        const str = this.buffer.toString(ENCODING, start, this.index);
+        const str = this.buffer.toString(this.encoding, start, this.index);
 
         this.expectChar("]");
 
@@ -137,13 +142,13 @@ class Parser {
             this.step();
         }
 
-        return this.buffer.toString(ENCODING, start, this.index + 1);
+        return this.buffer.toString(this.encoding, start, this.index + 1);
     }
 
     /* Helpers */
 
     private previous(): string {
-        return this.buffer.toString(ENCODING, this.index - 1, this.index);
+        return this.buffer.toString(this.encoding, this.index - 1, this.index);
     }
 
      // Get the next character, allows an expected value. If the next character does not
@@ -183,7 +188,7 @@ class Parser {
         if (this.index >= this.buffer.length) {
             this.next = "";
         } else {
-            this.next = this.buffer.toString(ENCODING, this.index, this.index + 1) ;
+            this.next = this.buffer.toString(this.encoding, this.index, this.index + 1);
         }           
     }
 
@@ -196,6 +201,13 @@ class Parser {
         if (this.next === "/") {
             this.ignoreComment();
             this.skipWhitespace();
+        }
+    }
+
+    private skipBOM() {
+        const bom = new Set("\xef\xbb\xbf\xff\xfe\xfe\xff");
+        while (bom.has(this.next) || this.next.charCodeAt(0) > 1000) {
+            this.step();
         }
     }
 
