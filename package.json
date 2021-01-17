@@ -7,7 +7,8 @@
   "scripts": {
     "build": "tsc",
     "test": "ts-node node_modules/tape/bin/tape test/**/*.spec.ts",
-    "prepublish": "tsc"
+    "prepublish": "tsc",
+    "preversion": "npm run build && npm test"
   },
   "keywords": [
     "valve",
