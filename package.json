@@ -6,7 +6,8 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "test": "ts-node node_modules/tape/bin/tape test/**/*.spec.ts"
+    "test": "ts-node node_modules/tape/bin/tape test/**/*.spec.ts",
+    "prepublish": "tsc"
   },
   "keywords": [
     "valve",

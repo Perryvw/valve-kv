@@ -28,20 +28,18 @@ class Parser {
     constructor (private buffer: Buffer, private encoding: BufferEncoding) { }
 
     public parse(): KVObject {
-        this.step(); // Initial step
+        this.step(); // Initial step to initialize this.next and this.index
 
-        this.skipBOM(); // Skip BOM
+        this.skipBOM(); // Try to skip BOM, no effect if not present
         
         this.skipWhitespace();
 
-        const bases = this.parseBases();
+        const bases = this.parseBases(); // Parse #base includes
 
         this.skipWhitespace();
 
-        const name = this.parseString();
-
+        const name = this.parseString(); // Assume all KV files are in format "name" { ... }
         this.skipWhitespace();
-
         const object = this.parseObject();
 
         return { [name]: object };
@@ -80,6 +78,13 @@ class Parser {
             obj[key] = value;
 
             this.skipWhitespace();
+
+            // If value is followed by conditional (ie [WINDOWS]), ignore it
+            // These conditionals are curently not included in the output
+            if (this.next === "[") {
+                this.ignoreConditional();
+                this.skipWhitespace();
+            }
         }
 
         this.expectChar("}");
@@ -118,7 +123,6 @@ class Parser {
         return string;
     }
 
-     // Parse a string.
      private parseBracketString() : string {
         this.expectChar("[");
 
@@ -151,7 +155,7 @@ class Parser {
         return this.buffer.toString(this.encoding, this.index - 1, this.index);
     }
 
-     // Get the next character, allows an expected value. If the next character does not
+    // Get the next character, allows an expected value. If the next character does not
     // match the expected character throws an error.
     private expectChar(expectedChar: string): string {
 
