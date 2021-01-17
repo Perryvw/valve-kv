@@ -1,0 +1,6 @@
+﻿#include "kv_included.vdf"
+
+"test case"
+{
+	"foo"	"bar"
+}

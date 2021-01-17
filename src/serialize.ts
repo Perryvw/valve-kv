@@ -1,17 +1,15 @@
 import { arrayToKvObject, isKvObject, KVObject } from "./index";
 
 export function serialize(kvobject: KVObject): string {
-    const keys = Object.keys(kvobject);
-    if (keys.length !== 1) {
-        throw new Error("The outer KV object must have exactly one name");
+    const roots = [];
+    for (const [key, value] of Object.entries(kvobject)) {
+        if (isKvObject(value)) {
+            roots.push(`"${key}"\n` + serializeIndented(value, 0));
+        } else {
+            roots.push(`"${key}"    ${value}`);
+        }
     }
-
-    const value = kvobject[keys[0]];
-    if (isKvObject(value)) {
-        return `"${keys[0]}"\n` + serializeIndented(value, 0);
-    } else {
-        return `"${keys[0]}"    ${value}`;
-    }
+    return roots.join("\n\n");
 }
 
 function serializeIndented(kvobject: KVObject, indent = 0) {

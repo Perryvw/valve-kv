@@ -16,3 +16,4 @@ function deserializeSerializeTest(filename: string) {
 }
 
 deserializeSerializeTest("basic.kv");
+deserializeSerializeTest("multipleroots.kv");

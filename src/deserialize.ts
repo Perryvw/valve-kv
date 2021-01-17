@@ -1,6 +1,7 @@
 import * as fs from "fs";
+import * as path from "path";
 
-import { KVObject } from "./index";
+import { isKvObject, KVObject, KVValue } from "./index";
 
 export function deserialize(
     kvstring: string | Buffer,
@@ -12,8 +13,9 @@ export function deserialize(
 }
 
 export function deserializeFile(filename: string, encoding: BufferEncoding = "utf8"): KVObject {
+    const workingDirectory = path.dirname(filename);
     const buffer = fs.readFileSync(filename);
-    const parser = new Parser(buffer, encoding);
+    const parser = new Parser(buffer, encoding, workingDirectory);
     return parser.parse();
 }
 
@@ -28,7 +30,11 @@ class Parser {
     private next = "";
     private characterSize = 1;
 
-    constructor(private buffer: Buffer, private encoding: BufferEncoding) {
+    constructor(
+        private buffer: Buffer,
+        private encoding: BufferEncoding,
+        private workingDir?: string
+    ) {
         if (encoding.includes("utf16")) {
             this.characterSize = 2; // Buffer is bytes, so 16-bit character is 2 buffer slots
         }
@@ -41,7 +47,7 @@ class Parser {
 
         this.skipWhitespace();
 
-        const bases = this.parseBases(); // Parse #base includes
+        const baseIncludes = this.parseBases(); // Parse #base includes
 
         this.skipWhitespace();
 
@@ -54,19 +60,49 @@ class Parser {
         this.skipWhitespace();
         const object = this.parseObject();
 
-        return { [name]: object };
+        // Merge base included objects into root
+        for (const baseIncluded of baseIncludes) {
+            const includedValues = Object.values(baseIncluded);
+            if (includedValues.length > 0 && isKvObject(includedValues[0])) {
+                for (const [key, value] of Object.entries(includedValues[0])) {
+                    assignOrMerge(object, key, value);
+                }
+            }
+        }
+
+        const result = { [name]: object };
+
+        this.skipWhitespace();
+
+        // If not yetat end of file, read other roots
+        while (!this.atEOF()) {
+            const name = this.parseString();
+            this.skipWhitespace();
+            const object = this.parseObject();
+
+            assignOrMerge(result, name, object);
+        }
+
+        return result;
     }
 
     private parseBases(): KVObject[] {
         const bases = [];
+
+        if (this.next === "#" && this.workingDir === undefined) {
+            throw new DeserializationError(
+                "#base includes are only supported when using deserializeFile",
+                this.index
+            );
+        }
 
         while (this.next === "#") {
             this.expectString("#base");
 
             this.skipWhitespace();
 
-            const path = this.parseString();
-            bases.push(deserializeFile(path));
+            const basePath = this.parseQuotedString();
+            bases.push(deserializeFile(path.join(this.workingDir!, basePath)));
 
             this.skipWhitespace();
         }
@@ -81,12 +117,13 @@ class Parser {
         this.skipWhitespace();
 
         while (this.next !== "}") {
-            const key = this.next === `"` ? this.parseString() : this.parseQuotelessString();
+            const key = this.parseString();
 
             this.skipWhitespace();
 
             const value = this.parseValue();
-            obj[key] = value;
+
+            assignOrMerge(obj, key, value);
 
             this.skipWhitespace();
 
@@ -104,12 +141,20 @@ class Parser {
     }
 
     private parseValue() {
-        if (this.next === null) {
+        if (this.next === "") {
             throw new DeserializationError("Unexpected EOF (end-of-file).", this.index);
-        } else if (this.next === '"') {
-            return this.parseString();
         } else if (this.next === "{") {
             return this.parseObject();
+        } else {
+            return this.parseString();
+        }
+    }
+
+    private parseString() {
+        if (this.next === "") {
+            throw new DeserializationError("Unexpected EOF (end-of-file).", this.index);
+        } else if (this.next === '"') {
+            return this.parseQuotedString();
         } else if (this.next === "[") {
             return this.parseBracketString();
         } else if (!isWhitespace(this.next)) {
@@ -119,11 +164,24 @@ class Parser {
         }
     }
 
-    private parseString(): string {
+    private parseQuotedString(): string {
         this.expectChar(`"`);
 
         const start = this.index;
-        while (this.next !== `"` || this.previous() === `\\`) {
+        while (!this.atEOF()) {
+            // Check if we are at end of the string
+            if (this.next === `"`) {
+                // A " preceded by an EVEN number of \ (also 0) ends string
+                let count = 0;
+                while (this.lookback(count + 1) === "\\") {
+                    count++;
+                }
+                if (count % 2 === 0) {
+                    break;
+                }
+            }
+
+            // Not at end of string, continue to next character
             this.step();
         }
 
@@ -157,13 +215,22 @@ class Parser {
             this.step();
         }
 
-        return this.buffer.toString(this.encoding, start, this.index + this.characterSize);
+        return this.buffer.toString(this.encoding, start, this.index);
     }
 
     /* Helpers */
 
+    // Get the character a number of characters back from the current index
+    private lookback(count: number): string {
+        return this.buffer.toString(
+            this.encoding,
+            this.index - count * this.characterSize,
+            this.index - (count - 1) * this.characterSize
+        );
+    }
+
     private previous(): string {
-        return this.buffer.toString(this.encoding, this.index - this.characterSize, this.index);
+        return this.lookback(1);
     }
 
     private atEOF(): boolean {
@@ -278,4 +345,23 @@ class Parser {
 
 function isWhitespace(char: string): boolean {
     return char.trim().length === 0;
+}
+
+function assignOrMerge(obj: KVObject, key: string, value: KVValue) {
+    // Check if duplicate key
+    if (obj[key] !== undefined) {
+        // If duplicate, heck if the value is already an array
+        const currentValue = obj[key];
+        if (Array.isArray(currentValue)) {
+            // Append new value to already existing array
+            currentValue.push(value);
+        } else {
+            // Not an array yet, create array containing the old value and new value
+            obj[key] = [currentValue, value];
+        }
+    } else {
+        obj[key] = value;
+    }
+
+    return obj;
 }

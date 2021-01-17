@@ -60,9 +60,18 @@ test(
     )
 );
 
-test("invalid outer throws", (t) => {
-    t.throws(() => {
-        serialize({ A: 3, B: 4 });
-    });
-    t.end();
-});
+test(
+    "multiple roots",
+    testSerialize(
+        { A: { B: 1 }, C: { D: 2 } },
+        `"A"
+{
+    "B"    "1"
+}
+
+"C"
+{
+    "D"    "2"
+}`
+    )
+);

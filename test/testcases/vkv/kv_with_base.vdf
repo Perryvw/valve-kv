@@ -1,0 +1,7 @@
+﻿#base "kv_base_included.vdf"
+
+"test case"
+{
+	"foo"	"bar"
+	"bar"	"baz"
+}
