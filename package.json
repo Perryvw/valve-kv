@@ -21,6 +21,7 @@
     "name": "Perry van Wesel",
     "url": "https://github.com/Perryvw"
   },
+  "files": ["dist/**/*"],
   "license": "MIT",
   "devDependencies": {
     "@types/tape": "^4.13.0",
