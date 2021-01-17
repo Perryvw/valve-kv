@@ -2,7 +2,10 @@ import * as fs from "fs";
 
 import { KVObject } from "./index";
 
-export function deserialize(kvstring: string | Buffer, encoding: BufferEncoding = "utf8"): KVObject {
+export function deserialize(
+    kvstring: string | Buffer,
+    encoding: BufferEncoding = "utf8"
+): KVObject {
     const buffer = typeof kvstring === "string" ? Buffer.from(kvstring) : kvstring;
     const parser = new Parser(buffer, encoding);
     return parser.parse();
@@ -21,22 +24,31 @@ export class DeserializationError extends Error {
 }
 
 class Parser {
-
     private index = -1;
     private next = "";
+    private characterSize = 1;
 
-    constructor (private buffer: Buffer, private encoding: BufferEncoding) { }
+    constructor(private buffer: Buffer, private encoding: BufferEncoding) {
+        if (encoding.includes("utf16")) {
+            this.characterSize = 2; // Buffer is bytes, so 16-bit character is 2 buffer slots
+        }
+    }
 
     public parse(): KVObject {
         this.step(); // Initial step to initialize this.next and this.index
 
         this.skipBOM(); // Try to skip BOM, no effect if not present
-        
+
         this.skipWhitespace();
 
         const bases = this.parseBases(); // Parse #base includes
 
         this.skipWhitespace();
+
+        // Return empty object if there is no KV in file
+        if (this.atEOF()) {
+            return {};
+        }
 
         const name = this.parseString(); // Assume all KV files are in format "name" { ... }
         this.skipWhitespace();
@@ -64,12 +76,11 @@ class Parser {
 
     private parseObject(): KVObject {
         const obj: KVObject = {};
-        
+
         this.expectChar("{");
         this.skipWhitespace();
 
         while (this.next !== "}") {
-
             const key = this.next === `"` ? this.parseString() : this.parseQuotelessString();
 
             this.skipWhitespace();
@@ -95,7 +106,7 @@ class Parser {
     private parseValue() {
         if (this.next === null) {
             throw new DeserializationError("Unexpected EOF (end-of-file).", this.index);
-        } else if (this.next === "\"") {
+        } else if (this.next === '"') {
             return this.parseString();
         } else if (this.next === "{") {
             return this.parseObject();
@@ -123,7 +134,7 @@ class Parser {
         return string;
     }
 
-     private parseBracketString() : string {
+    private parseBracketString(): string {
         this.expectChar("[");
 
         const start = this.index;
@@ -139,26 +150,29 @@ class Parser {
         return `[${str}]`;
     }
 
-    private parseQuotelessString() : string {
+    private parseQuotelessString(): string {
         const start = this.index;
 
         while (this.next !== null && !isWhitespace(this.next)) {
             this.step();
         }
 
-        return this.buffer.toString(this.encoding, start, this.index + 1);
+        return this.buffer.toString(this.encoding, start, this.index + this.characterSize);
     }
 
     /* Helpers */
 
     private previous(): string {
-        return this.buffer.toString(this.encoding, this.index - 1, this.index);
+        return this.buffer.toString(this.encoding, this.index - this.characterSize, this.index);
+    }
+
+    private atEOF(): boolean {
+        return this.index >= this.buffer.length;
     }
 
     // Get the next character, allows an expected value. If the next character does not
     // match the expected character throws an error.
     private expectChar(expectedChar: string): string {
-
         const current = this.next;
 
         if (current === undefined) {
@@ -166,7 +180,10 @@ class Parser {
         }
 
         if (expectedChar && current !== expectedChar) {
-            throw new DeserializationError(`Unexpected character '${current}', expected '${expectedChar}'.`, this.index);
+            throw new DeserializationError(
+                `Unexpected character '${current}', expected '${expectedChar}'.`,
+                this.index
+            );
         }
 
         this.step();
@@ -184,21 +201,30 @@ class Parser {
 
     private step() {
         // Do not allow stepping from beyond the end of the stream
-        if (this.index >= this.buffer.length) {
+        if (this.atEOF()) {
             throw new DeserializationError("Unexpected EOF (end-of-file).", this.index);
         }
-        this.index++;
+        this.index += this.characterSize;
 
-        if (this.index >= this.buffer.length) {
+        if (this.atEOF()) {
             this.next = "";
         } else {
-            this.next = this.buffer.toString(this.encoding, this.index, this.index + 1);
-        }           
+            this.next = this.buffer.toString(
+                this.encoding,
+                this.index,
+                this.index + this.characterSize
+            );
+        }
     }
 
     private skipWhitespace() {
         // Ignore whitespace
-        while (this.next === " " ||this.next === "\t" || this.next === "\r" || this.next === "\n") {
+        while (
+            this.next === " " ||
+            this.next === "\t" ||
+            this.next === "\r" ||
+            this.next === "\n"
+        ) {
             this.step();
         }
 
@@ -210,15 +236,26 @@ class Parser {
 
     private skipBOM() {
         const bom = new Set("\xef\xbb\xbf\xff\xfe\xfe\xff");
-        while (bom.has(this.next) || this.next.charCodeAt(0) > 1000) {
-            this.step();
+        // BOM is single character so we cannot use this.next/this.step() as it reads multiple characters
+        // for some encodings like utf16
+        let next = this.buffer.toString("utf8", this.index, this.index + 1);
+        while (bom.has(next) || next.charCodeAt(0) > 1000) {
+            this.index++;
+            next = this.buffer.toString("utf8", this.index, this.index + 1);
         }
+
+        // Make sure we set the next character according to encoding
+        this.next = this.buffer.toString(
+            this.encoding,
+            this.index,
+            this.index + this.characterSize
+        );
     }
 
-    private ignoreConditional() : void {
+    private ignoreConditional(): void {
         this.expectChar("[");
 
-        while (this.next !== "]" && this.index < this.buffer.length) {
+        while (this.next !== "]" && !this.atEOF()) {
             this.step();
         }
 
@@ -230,10 +267,10 @@ class Parser {
     }
 
     // Advance the read index until after the single line comment
-    private ignoreComment() : void {
+    private ignoreComment(): void {
         this.step();
 
-        while (this.next !== "\n") {
+        while (this.next !== "\n" && !this.atEOF()) {
             this.step();
         }
     }

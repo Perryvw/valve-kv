@@ -35,7 +35,7 @@ Serialize an object to KV:
 ```ts
 import { serialize } from "valve-kv";
 
-const myObj = { A: { B: C } };
+const myObj = { A: { B: "C" } };
 const kv = serialize(myObj);
 /* kv value:
 "A"

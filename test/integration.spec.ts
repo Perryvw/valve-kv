@@ -5,7 +5,7 @@ import * as test from "tape";
 import { deserialize, serialize } from "../src/index";
 
 function deserializeSerializeTest(filename: string) {
-    test("integration " + filename, t => {
+    test("integration " + filename, (t) => {
         const fileContent = fs.readFileSync(path.join(__dirname, "testcases", filename)).toString();
         const kvObject = deserialize(fileContent);
         const serializedKv = serialize(kvObject);
@@ -15,4 +15,4 @@ function deserializeSerializeTest(filename: string) {
     });
 }
 
-deserializeSerializeTest("test.kv");
+deserializeSerializeTest("basic.kv");

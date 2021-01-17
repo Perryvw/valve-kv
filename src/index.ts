@@ -22,7 +22,7 @@ export function arrayFromKvObject(kvobject: KVObject): KVValue[] {
     const result = [];
     let index = 1;
     let indexString;
-    while (kvobject[indexString = index.toString()]) {
+    while (kvobject[(indexString = index.toString())]) {
         result.push(kvobject[indexString]);
     }
 

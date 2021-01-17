@@ -8,25 +8,33 @@ const testSerialize = (kvobject: KVObject, expected: string) => (t: test.Test) =
     t.end();
 };
 
-test("serialize string", testSerialize(
-    { A: { B: "C" } },
-`"A"
+test(
+    "serialize string",
+    testSerialize(
+        { A: { B: "C" } },
+        `"A"
 {
     "B"    "C"
 }`
-));
+    )
+);
 
-test("serialize number", testSerialize(
-    { A: { B: 5 } },
-`"A"
+test(
+    "serialize number",
+    testSerialize(
+        { A: { B: 5 } },
+        `"A"
 {
     "B"    "5"
 }`
-));
+    )
+);
 
-test("serialize array", testSerialize(
-    { A: { B: ["C", "D"] } },
-`"A"
+test(
+    "serialize array",
+    testSerialize(
+        { A: { B: ["C", "D"] } },
+        `"A"
 {
     "B"
     {
@@ -34,11 +42,14 @@ test("serialize array", testSerialize(
         "2"    "D"
     }
 }`
-));
+    )
+);
 
-test("serialize nested", testSerialize(
-    { A: { B: { C: "D" }, E: "F" } },
-`"A"
+test(
+    "serialize nested",
+    testSerialize(
+        { A: { B: { C: "D" }, E: "F" } },
+        `"A"
 {
     "B"
     {
@@ -46,11 +57,12 @@ test("serialize nested", testSerialize(
     }
     "E"    "F"
 }`
-));
+    )
+);
 
-test("invalid outer throws", t => {
+test("invalid outer throws", (t) => {
     t.throws(() => {
         serialize({ A: 3, B: 4 });
     });
-    t.end()
-})
+    t.end();
+});
