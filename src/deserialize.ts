@@ -151,17 +151,20 @@ class Parser {
     }
 
     private parseString() {
+        let result = "";
         if (this.next === "") {
             throw new DeserializationError("Unexpected EOF (end-of-file).", this.index);
         } else if (this.next === '"') {
-            return this.parseQuotedString();
+            result = this.parseQuotedString();
         } else if (this.next === "[") {
-            return this.parseBracketString();
+            result = this.parseBracketString();
         } else if (!isWhitespace(this.next)) {
-            return this.parseQuotelessString();
+            result = this.parseQuotelessString();
         } else {
             throw new DeserializationError(`Unexpected character '${this.next}'.`, this.index);
         }
+
+        return kv_unescape(result);
     }
 
     private parseQuotedString(): string {
@@ -227,10 +230,6 @@ class Parser {
             this.index - count * this.characterSize,
             this.index - (count - 1) * this.characterSize
         );
-    }
-
-    private previous(): string {
-        return this.lookback(1);
     }
 
     private atEOF(): boolean {
@@ -364,4 +363,37 @@ function assignOrMerge(obj: KVObject, key: string, value: KVValue) {
     }
 
     return obj;
+}
+
+function kv_unescape(escaped: string): string {
+    const result: string[] = [];
+
+    let escape = false;
+    for (let i = 0; i < escaped.length; i++) {
+        const char = escaped[i];
+        if (!escape && (char === "\\")) {
+            escape = true;
+            continue;
+        }
+
+        if (escape) {
+            if (char === '"') {
+                result.push('"');
+            } else if (char === "\\") {
+                result.push("\\")
+            } else if (char === "n") {
+                result.push("\n");
+            } else if (char === "t") {
+                result.push("\t");
+            } else {
+                // Unknown escape sequence, just keep it
+                result.push("\\", char);
+            }
+        } else {
+            result.push(char);
+        }
+        escape = false;
+    }
+    
+    return result.join("");
 }

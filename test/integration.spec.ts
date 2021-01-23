@@ -18,3 +18,4 @@ function deserializeSerializeTest(filename: string) {
 deserializeSerializeTest("basic.kv");
 deserializeSerializeTest("multipleroots.kv");
 deserializeSerializeTest("multilineValue.kv");
+deserializeSerializeTest("stringescapes.kv");

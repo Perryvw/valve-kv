@@ -19,6 +19,16 @@ test(
     )
 );
 
+test("serialize string with quote",
+    testSerialize(
+        { A: { B: `A"B` } },
+        `"A"
+{
+    "B"    "A\\"B"
+}`
+    )
+);
+
 test(
     "serialize number",
     testSerialize(

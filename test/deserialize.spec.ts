@@ -41,7 +41,7 @@ test(
     "deserialize string with escaped quote",
     testDeserialize(`"A" { "B"  "C\\"D" }`, {
         A: {
-            B: `C\\"D`,
+            B: `C"D`,
         },
     })
 );
@@ -96,11 +96,11 @@ testDeserializeFile("commentsMultiLine.kv", {
 });
 testDeserializeFile("commenteof.kv", {});
 testDeserializeFile("stringescapes.kv", {
-    Test: { A: '3\\"5', B: "A\\\\", C: "\\\\" },
+    Test: { A: '3"5', B: "A\\", C: "\\" },
 });
 testDeserializeFile("quoteless.kv", {
     TestDocument: {
-        QuotedChild: 'edge\\ncase\\"haha\\\\"',
+        QuotedChild: 'edge\ncase"haha\\"',
         UnquotedChild: { Key1: "Value1", Key2: "Value2", Key3: "Value3" },
     },
 });
@@ -112,7 +112,7 @@ testDeserializeFile("quotelessBracket.kv", {
 });
 testDeserializeFile("quotelessSpecial.kv", {
     TestDocument: {
-        $QuotedChild: 'edge\\ncase\\"haha\\\\"',
+        $QuotedChild: 'edge\ncase"haha\\"',
         "#UnquotedChild": {
             "&Key1": "$Value1",
             "!Key2": "@Value2",

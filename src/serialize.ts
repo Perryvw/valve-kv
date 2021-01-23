@@ -15,7 +15,9 @@ export function serialize(kvobject: KVObject): string {
 function serializeIndented(kvobject: KVObject, indent = 0) {
     let result = [indentString(indent) + "{"];
     for (const [key, value] of Object.entries(kvobject)) {
-        if (typeof value === "string" || typeof value === "number") {
+        if (typeof value === "string"){
+            result.push(`${indentString(indent + 1)}"${key}"    "${escape(value)}"`);
+        } else if (typeof value === "number") {
             result.push(`${indentString(indent + 1)}"${key}"    "${value}"`);
         } else if (Array.isArray(value)) {
             result.push(`${indentString(indent + 1)}"${key}"`);
@@ -28,6 +30,12 @@ function serializeIndented(kvobject: KVObject, indent = 0) {
 
     result.push(indentString(indent) + "}");
     return result.join("\n");
+}
+
+function escape(unescaped: string): string {
+    return unescaped
+        .replace(/\\/g, "\\\\")
+        .replace(/"/g, '\\"');
 }
 
 const indentString = (count: number) => "    ".repeat(count);
