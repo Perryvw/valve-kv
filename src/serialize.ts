@@ -1,4 +1,4 @@
-import { arrayToKvObject, isKvObject, KVObject } from "./index";
+import { arrayToKvObject, isDuplicateKeyArray, isKvObject, KVObject, KVValue } from "./index";
 
 export function serialize(kvobject: KVObject): string {
     const roots = [];
@@ -12,24 +12,32 @@ export function serialize(kvobject: KVObject): string {
     return roots.join("\n\n");
 }
 
-function serializeIndented(kvobject: KVObject, indent = 0) {
+function serializeIndented(kvobject: KVObject, indent = 0): string {
     let result = [indentString(indent) + "{"];
     for (const [key, value] of Object.entries(kvobject)) {
-        if (typeof value === "string"){
-            result.push(`${indentString(indent + 1)}"${key}"    "${escape(value)}"`);
-        } else if (typeof value === "number") {
-            result.push(`${indentString(indent + 1)}"${key}"    "${value}"`);
-        } else if (Array.isArray(value)) {
-            result.push(`${indentString(indent + 1)}"${key}"`);
-            result.push(serializeIndented(arrayToKvObject(value), indent + 1));
-        } else {
-            result.push(`${indentString(indent + 1)}"${key}"`);
-            result.push(serializeIndented(value, indent + 1));
-        }
+        result.push(serializeKeyValue(key, value, indent));
     }
 
     result.push(indentString(indent) + "}");
     return result.join("\n");
+}
+
+function serializeKeyValue(key: string, value: KVValue, indent = 0): string {
+    if (typeof value === "string"){
+        return `${indentString(indent + 1)}"${key}"    "${escape(value)}"`;
+    } else if (typeof value === "number") {
+        return `${indentString(indent + 1)}"${key}"    "${value}"`;
+    } else if (Array.isArray(value)) {
+        if (isDuplicateKeyArray(value)) {
+            return value.map(v => serializeKeyValue(key, v, indent)).join("\n");
+        } else {
+            return `${indentString(indent + 1)}"${key}"\n`
+                + serializeIndented(arrayToKvObject(value), indent + 1);
+        }
+    } else {
+        return `${indentString(indent + 1)}"${key}"\n`
+            + serializeIndented(value, indent + 1);
+    }
 }
 
 function escape(unescaped: string): string {

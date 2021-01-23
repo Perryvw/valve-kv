@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 
-import { isKvObject, KVObject, KVValue } from "./index";
+import { createDuplicateKeyArray, isKvObject, KVObject, KVValue } from "./index";
 
 export function deserialize(
     kvstring: string | Buffer,
@@ -74,7 +74,7 @@ class Parser {
 
         this.skipWhitespace();
 
-        // If not yetat end of file, read other roots
+        // If not yet at end of file, read other roots
         while (!this.atEOF()) {
             const name = this.parseString();
             this.skipWhitespace();
@@ -356,7 +356,7 @@ function assignOrMerge(obj: KVObject, key: string, value: KVValue) {
             currentValue.push(value);
         } else {
             // Not an array yet, create array containing the old value and new value
-            obj[key] = [currentValue, value];
+            obj[key] = createDuplicateKeyArray([currentValue, value]);
         }
     } else {
         obj[key] = value;

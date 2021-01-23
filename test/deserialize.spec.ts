@@ -2,7 +2,7 @@ import * as path from "path";
 import * as test from "tape";
 import { performance } from "perf_hooks";
 
-import { deserialize, deserializeFile, KVObject } from "../src/index";
+import { createDuplicateKeyArray, deserialize, deserializeFile, KVObject } from "../src/index";
 
 const testDeserialize = (kvstring: string, expected: KVObject) => (t: test.Test) => {
     const result = deserialize(kvstring);
@@ -122,10 +122,10 @@ testDeserializeFile("quotelessSpecial.kv", {
 });
 testDeserializeFile("conditional.kv", {
     "test case": {
-        "operating system": ["windows 32-bit", "something else"],
+        "operating system": createDuplicateKeyArray(["windows 32-bit", "something else"]),
         platform: "windows",
-        "ui type": ["Widescreen Xbox 360", "Xbox 360"],
-        "ui size": ["small", "medium", "large"],
+        "ui type": createDuplicateKeyArray(["Widescreen Xbox 360", "Xbox 360"]),
+        "ui size": createDuplicateKeyArray(["small", "medium", "large"]),
     },
 });
 testDeserializeFile("base.kv", {
@@ -136,13 +136,13 @@ testDeserializeFile("multipleroots.kv", {
     root2: { C: "D" },
 });
 testDeserializeFile("duplicatekeys.kv", {
-    root: { key1: ["2", { key2: ["5", "6"] }, { key3: "4" }] },
+    root: { key1: createDuplicateKeyArray(["2", { key2: createDuplicateKeyArray(["5", "6"]) }, { key3: "4" }]) },
 });
 testDeserializeFile("duplicaterootkeys.kv", {
-    root: [
+    root: createDuplicateKeyArray([
         { key1: "2", key2: "4" },
         { key1: "3", key2: "5" },
-    ],
+    ]),
 });
 
 function testDeserializeFile(fileName: string, expected: KVObject) {

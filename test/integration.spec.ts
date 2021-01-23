@@ -16,6 +16,7 @@ function deserializeSerializeTest(filename: string) {
 }
 
 deserializeSerializeTest("basic.kv");
+deserializeSerializeTest("duplicatekeys.kv");
 deserializeSerializeTest("multipleroots.kv");
 deserializeSerializeTest("multilineValue.kv");
 deserializeSerializeTest("stringescapes.kv");
