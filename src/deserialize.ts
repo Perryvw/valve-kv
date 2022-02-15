@@ -101,7 +101,7 @@ class Parser {
 
             this.skipWhitespace();
 
-            const basePath = this.parseQuotedString();
+            const basePath = this.parseString();
             bases.push(deserializeFile(path.join(this.workingDir!, basePath)));
 
             this.skipWhitespace();
@@ -394,6 +394,6 @@ function kv_unescape(escaped: string): string {
         }
         escape = false;
     }
-    
+
     return result.join("");
 }
